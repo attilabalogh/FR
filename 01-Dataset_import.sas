@@ -95,7 +95,7 @@ proc sort data=A_input_02 nodupkey;
 	by gvkey fyear;
 run;
 
-/*	Connecting to WRDS to upload quesry file and obain 	*/
+/*	Connecting to WRDS to upload query file and obtain 	*/
 /*	Compustat dataset for the GVKEY-FYEAR combinations	*/
 
 %let wrds = wrds.wharton.upenn.edu 4016;
@@ -113,5 +113,6 @@ proc sql;
 quit;
 proc download data=A_FR_00 out=A_FR_00;
 run;
+
 endrsubmit;
 signoff;

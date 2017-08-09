@@ -17,8 +17,8 @@
 /*                 The calculation steps are described in Balogh "Financial    */
 /*                 Ratios for Accounting Research" (Working paper, 2017)       */
 /*                                                                             */
-/*	               This program is to be used in conjunction with prerequisite */
-/*	               programs listed in the 00-Master.sas file                   */
+/*                 This program is to be used in conjunction with prerequisite */
+/*                 programs listed in the 00-Master.sas file                   */
 /*******************************************************************************/
 
 /*	Setting key Compustat variable names			*/
@@ -32,6 +32,7 @@
 /*	Level of Consolidation Data - Consolidated */
 	(consol eq "C") and
 /*	Data Format - Standardized */
+/*	Exclude SUMM_STD (Domestic Annual Restated Data)	*/
 	(datafmt eq "STD") and
 /*	Population Source - Domestic (USA, Canada and ADRs) */
 	(popsrc eq "D") and
