@@ -5,8 +5,8 @@
 /*  Program      : 02-RNOA.sas                                                 */
 /*  Author       : Attila Balogh, School of Banking and Finance                */
 /*                 UNSW Business School, UNSW Sydney                           */
-/*  Date Created : Aug 2017                                                    */
-/*  Last Modified: Aug 2017                                                    */
+/*  Date Created : 17 Oct 2017                                                 */
+/*  Last Modified: 17 Oct 2017                                                 */
 /*                                                                             */
 /*  Description  : Calculate Return on Net Operating Assets using Compustat    */ 
 /*                                                                             */
@@ -14,37 +14,39 @@
 /*                 Penman "Ratio Analysis and Equity Valuation: From Research  */
 /*                 to Practice" (Review of Accounting Studies, 2001).          */
 /*                                                                             */
-/*                 The calculation steps are described in Balogh "Financial    */
-/*                 Ratios for Accounting Research" (Working paper, 2017)       */
+/*                 The calculation steps are described in                      */
+/*                 Balogh, A, Financial Ratios for Accounting Research         */
+/*                 Available at SSRN: https://ssrn.com/abstract=3053402        */
 /*                                                                             */
 /*                 This program is to be used in conjunction with prerequisite */
 /*                 programs listed in the 00-Master.sas file                   */
 /*******************************************************************************/
 
-/*	Setting key Compustat variable names			*/
+/*  Setting key Compustat variable names                                       */
 %let MainVars = gvkey fyear conm;
 
-/*	Setting RNOA-specific Compustat variable names	*/
+/*  Setting RNOA-specific Compustat variable names                             */
 %let ROAVars = NI DVP MSA RECTA MII MIB XINT IDIT CEQ TSTKP DVPA DLC DLTT PSTK TSTKP DVPA CHE IVAO;
 
-/*	Setting standard Compustat Filters 				*/
+/*  Setting standard Compustat Filters                                         */
 %let CSfilter = (
-/*	Level of Consolidation Data - Consolidated */
+/*  Level of Consolidation Data - Consolidated                                 */
 	(consol eq "C") and
-/*	Data Format - Standardized */
-/*	Exclude SUMM_STD (Domestic Annual Restated Data)	*/
+/*  Data Format - Standardized */
+/*  Exclude SUMM_STD (Domestic Annual Restated Data)                           */
 	(datafmt eq "STD") and
-/*	Population Source - Domestic (USA, Canada and ADRs) */
+/*  Population Source - Domestic (USA, Canada and ADRs)                        */
 	(popsrc eq "D") and
 	(not missing(fyear)) and
-/* Industry Format - Financial Services   */
-/* Some firms report in both formats and  */
-/* that can be responsible for duplicates */
+/*  Industry Format - Financial Services                                       */
+/*  Some firms report in both formats and                                      */
+/*  that can be responsible for duplicates                                     */
 	(indfmt eq "INDL") and
-/*	Assets total: missing */
+/*  Assets total: missing */
 	(at notin(0,.)) and
 	(sale notin(0,.)) and
-/*	Comparability Status - Company has undergone a fiscal year change. Some or all data may not be available */
+/*  Comparability Status - Company has undergone a fiscal year change.         */
+/*  Some or all data may not be available                                      */
 	(COMPST ne 'DB') );
 
 data A_FR_01 ;
@@ -53,16 +55,19 @@ data A_FR_01 ;
 	keep &MainVars. &ROAVars.;
 run;
 
-/*	Optional: check all relevant variables are kept	*/
+/*	Optional: check that all relevant variables are kept                       */
 /*
+
 proc datasets memtype=data;
    contents data=A_FR_01;
 run;
-*/
-/*	Change missing values to zero */
 
-/*	US Corporation Income Tax top rates				*/
-/*	https://www.irs.gov/pub/irs-soi/02corate.pdf	*/
+*/
+
+/*	Change missing values to zero                                              */
+
+/*	US Corporation Income Tax top rates                                        */
+/*	https://www.irs.gov/pub/irs-soi/02corate.pdf                               */
 
 %let g_AST = 0.02; /* Average state tax */
 
@@ -89,14 +94,14 @@ data A_FR_02 ;
 	if missing(IVAO) then IVAO = 0; 
 run;
 
-/* Creating lagMSA and lagRECTA variables */
+/*  Creating lagMSA and lagRECTA variables                                     */
 
 data A_FR_02_lag01 /*(RENAME=(fyear=fyear01 gvkey=gvkey01))*/;
 	set A_FR_02;
 	keep gvkey conm fyear MSA RECTA;
 run;
 
-proc sort data = A_FR_02_lag01;
+proc sort data = A_FR_02_lag01 nodupkey;
 	by gvkey fyear;
 run;
 
@@ -113,7 +118,7 @@ data A_FR_02_lag02;
 	label g_lagMSA= g_lagRECTA=;
 run;
 
-/* Merging back lagSALE / lagMSA / lagRECTA */
+/*  Merging back lagSALE / lagMSA / lagRECTA                                   */
 
 proc sql;
 	create table A_FR_03 as
@@ -122,8 +127,7 @@ proc sql;
 		on a.gvkey = b.gvkey and a.fyear = b.fyear;
 quit;
 
-
-/* Calculating financial ratios 1 of 2 */ 
+/*  Calculating financial ratios 1 of 2                                        */ 
 
 data A_FR_04;
 	set A_FR_03;
@@ -185,14 +189,14 @@ g_NOA = g_NFO + g_CSE + MIB;
 
 run;
 
-/* Creating g_lagNOA variable */
+/*  Creating g_lagNOA variable                                                 */
 
 data A_FR_04_lag01;
 	set A_FR_04;
 	keep gvkey conm fyear g_NOA;
 run;
 
-proc sort data = A_FR_04_lag01;
+proc sort data = A_FR_04_lag01 nodupkey;
 	by gvkey fyear;
 run;
 
@@ -207,7 +211,7 @@ data A_FR_04_lag02;
 	drop g_NOA conm;
 run;
 
-/* Merging back g_lagNOA */
+/*  Merging back g_lagNOA                                                      */
 
 proc sql;
 	create table A_FR_05 as
@@ -216,22 +220,28 @@ proc sql;
 		on a.gvkey = b.gvkey and a.fyear = b.fyear;
 quit;
 
-/*	Calculating RNOA	*/
+/*  Calculating RNOA                                                           */
 data A_FR_06;
 	set A_FR_05;
 
-/*	Equation 1	*/
-/*	Return on Net Operating Assets (g_RNOA) = Comprehensive Operating Income (g_OI)
-	divided by lagged Net Operating Assets (g_lagNOA)												*/
+/*******************************************************************************/
+/*  Equation 1                                                                 */
+/*  Return on Net Operating Assets (g_RNOA) =
+    Comprehensive Operating Income (g_OI)
+    divided by lagged Net Operating Assets (g_lagNOA)                          */
 g_RNOA = g_OI / g_lagNOA;
 	drop &ROAVars.;
 run;
 
-/*	Removing additional firm years obtained to lagged variables	*/
+/*  Removing additional firm years obtained to lagged variables                */
 
 proc sql;
 	create table A_FR_07 as
  		select a.gvkey as gvkeyIN, a.fyear as fyearIN, b.*
-		from A_input_02 a left join A_FR_06 b
+		from A_FR_00 a left join A_FR_06 b
 		on a.gvkey = b.gvkey and a.fyear = b.fyear;
 quit;
+
+/* *************************************************************************** */
+/* *************************  Attila Balogh, 2017  *************************** */
+/* *************************************************************************** */

@@ -5,8 +5,8 @@
 /*  Program      : 00-Master.sas                                               */
 /*  Author       : Attila Balogh, School of Banking and Finance                */
 /*                 UNSW Business School, UNSW Sydney                           */
-/*  Date Created : Aug 2017                                                    */
-/*  Last Modified: Aug 2017                                                    */
+/*  Date Created : 17 Oct 2017                                                 */
+/*  Last Modified: 17 Oct 2017                                                 */
 /*                                                                             */
 /*  Description  : Master file with references to separate ratio calculators   */ 
 /*                                                                             */
@@ -17,8 +17,9 @@
 /*                 Compustat database accessed though Wharton Research         */
 /*                 Data Services (WRDS).                                       */
 /*                                                                             */
-/*                 The calculation steps are described in Balogh "Financial    */
-/*                 Ratios for Accounting Research" (Working paper, 2017)       */
+/*                 The calculation steps are described in                      */
+/*                 Balogh, A, Financial Ratios for Accounting Research         */
+/*                 Available at SSRN: https://ssrn.com/abstract=3053402        */
 /*                                                                             */
 /*******************************************************************************/
 
@@ -30,3 +31,11 @@
 
 %include "02-RNOA.sas" ;
 
+/*	Obtaining firm age and calculating industry and size adjusted age          */
+
+%include "04-Firm_age.sas" ;
+
+
+/* *************************************************************************** */
+/* *************************  Attila Balogh, 2017  *************************** */
+/* *************************************************************************** */

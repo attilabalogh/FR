@@ -5,8 +5,8 @@
 /*  Program      : 01-Dataset_import.sas                                       */
 /*  Author       : Attila Balogh, School of Banking and Finance                */
 /*                 UNSW Business School, UNSW Sydney                           */
-/*  Date Created : Aug 2017                                                    */
-/*  Last Modified: Aug 2017                                                    */
+/*  Date Created : 17 Oct 2017                                                 */
+/*  Last Modified: 17 Oct 2017                                                 */
 /*                                                                             */
 /*  Description  : Import a Compustat dataset from the WRDS system             */ 
 /*                                                                             */
@@ -16,8 +16,9 @@
 /*                 such dataset, the program creates a test dataset to         */
 /*                 demonstrate its workings.                                   */
 /*                                                                             */
-/*                 The calculation steps are described in Balogh "Financial    */
-/*                 Ratios for Accounting Research" (Working paper, 2017)       */
+/*                 The calculation steps are described in                      */
+/*                 Balogh, A, Financial Ratios for Accounting Research         */
+/*                 Available at SSRN: https://ssrn.com/abstract=3053402        */
 /*                                                                             */
 /*	               This program is to be used in conjunction with prerequisite */
 /*	               programs listed in the 00-Master.sas file                   */
@@ -75,9 +76,9 @@ datalines;
 ;
 run;
 
-/*	Dataset import starts here with a starting dataset named A_input_00        */
+/*  Dataset import starts here with a starting dataset named A_input_00        */
 
-/*	Creating lagged FYEAR dataset 				 		*/
+/*  Creating lagged FYEAR dataset 				 		*/
 data A_input_01;
 	set A_input_00;
 	Lfyear = fyear - 1;
@@ -85,18 +86,24 @@ data A_input_01;
 	rename Lfyear = fyear;
 run;
 
-/*	Merging FYEAR and lagged FYEAR datasets				*/
+/*  Merging FYEAR and lagged FYEAR datasets				                       */
 data A_input_02;
 	set A_input_00 A_input_01;
 run;
 
-/*	Removing duplicates for final input dataset			*/
+/*  Removing duplicates for final input dataset                                */
 proc sort data=A_input_02 nodupkey;
 	by gvkey fyear;
 run;
 
-/*	Connecting to WRDS to upload query file and obtain 	*/
-/*	Compustat dataset for the GVKEY-FYEAR combinations	*/
+/*  Connecting to WRDS to upload query file and obtain                         */
+/*  Compustat dataset for the GVKEY-FYEAR combinations                         */
+
+/*  Use this code if you need to connect to WRDS remotely                      */
+/*  It first uploads the Input file, matches financial data from comp.funda    */
+/*  and finally downloads the dataset to the local SAS instance                */
+
+/*
 
 %let wrds = wrds.wharton.upenn.edu 4016;
 options comamid=TCP remote=wrds;
@@ -105,14 +112,29 @@ signon username=_prompt_ password=_prompt_;
 rsubmit;
 proc upload data=A_input_02;
 run;
+endrsubmit;
+
+*/
+
 proc sql;
 	create table A_FR_00 as
  		select a.gvkey as gvkeyA, a.fyear as fyearA, b.*
 		from A_input_02 a left join compm.funda b
 		on a.gvkey = b.gvkey and a.fyear = b.fyear;
 quit;
+
+/*  Use this code if you need to connect to WRDS remotely                      */
+
+/*
+
+rsubmit;
 proc download data=A_FR_00 out=A_FR_00;
 run;
-
 endrsubmit;
 signoff;
+
+*/
+
+/* *************************************************************************** */
+/* *************************  Attila Balogh, 2017  *************************** */
+/* *************************************************************************** */
