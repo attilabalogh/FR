@@ -17,7 +17,7 @@
 /*                 Compustat database accessed though Wharton Research         */
 /*                 Data Services (WRDS).                                       */
 /*                                                                             */
-/*                 The calculation steps are described in                      */
+/*                 Please reference the following paper when using this code   */
 /*                 Balogh, A, Financial Ratios for Accounting Research         */
 /*                 Available at SSRN: https://ssrn.com/abstract=3053402        */
 /*                                                                             */
