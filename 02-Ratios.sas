@@ -141,8 +141,8 @@ data A_FR_04;
 	set A_FR_03;
 
 /*  Equation 2	*/
-/*  Core Net Financial Expense (Core NFE) = after tax interest expense (#15 × (1 - marginal tax rate))
-    plus preferred dividends (#19) and minus after tax interest income (#62 × (1 - marginal tax rate)).
+/*  Core Net Financial Expense (Core NFE) = after tax interest expense (#15 Ã— (1 - marginal tax rate))
+    plus preferred dividends (#19) and minus after tax interest income (#62 Ã— (1 - marginal tax rate)).
     */
 g_CNFE = (XINT * (1- g_MTAX )) + DVP - (IDIT * (1- g_MTAX));
 	label g_CNFE = "Core Net Financial Expense";
