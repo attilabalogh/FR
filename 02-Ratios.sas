@@ -2,13 +2,14 @@
 /*                                                                             */
 /*                   Financial Ratios for Accounting Research                  */
 /*                                                                             */
-/*  Program      : 02-RNOA.sas                                                 */
+/*  Program      : 02-Ratios.sas                                               */
 /*  Author       : Attila Balogh, School of Banking and Finance                */
 /*                 UNSW Business School, UNSW Sydney                           */
 /*  Date Created : 17 Oct 2017                                                 */
-/*  Last Modified: 17 Oct 2017                                                 */
+/*  Last Modified: 27 Oct 2017                                                 */
 /*                                                                             */
 /*  Description  : Calculate Return on Net Operating Assets using Compustat    */ 
+/*                 along with a host of other financial ratios                 */ 
 /*                                                                             */
 /*  Notes        : The program is based on the definitions used by Nissim and  */
 /*                 Penman "Ratio Analysis and Equity Valuation: From Research  */
@@ -23,10 +24,10 @@
 /*******************************************************************************/
 
 /*  Setting key Compustat variable names                                       */
-%let MainVars = gvkey fyear conm;
+%let MainVars = gvkey fyear /*conm*/;
 
 /*  Setting RNOA-specific Compustat variable names                             */
-%let ROAVars = NI DVP MSA RECTA MII MIB XINT IDIT CEQ TSTKP DVPA DLC DLTT PSTK TSTKP DVPA CHE IVAO SALE;
+%let ROAVars = NI DVP MSA RECTA MII MIB XINT IDIT CEQ TSTKP DVPA DLC DLTT PSTK TSTKP DVPA CHE IVAO SALE EIEA NOPI SPI XIDO;
 
 /*  Setting standard Compustat Filters                                         */
 %let CSfilter = (
@@ -74,12 +75,24 @@ run;
 
 /*	US Corporation Income Tax top rates                                        */
 /*	https://www.irs.gov/pub/irs-soi/02corate.pdf                               */
+/*  http://taxpolicycenter.org/taxfacts/Content/PDF/corporate_historical_bracket.pdf  */
 
 %let g_AST = 0.02; /* Average state tax */
 
 data A_FR_02 ;
 	set A_FR_01;
-	if fyear > 1950 then g_MTAX = (0.42 + &g_AST.) ;
+	if fyear = 1950 then g_MTAX = (0.42 + &g_AST.);
+	if fyear = 1951 then g_MTAX = (0.5075 + &g_AST.);
+	if ((fyear >= 1952) and (fyear =< 1963)) then g_MTAX = (0.52 + &g_AST.);
+	if fyear = 1964 then g_MTAX = (0.50 + &g_AST.);
+	if ((fyear >= 1965) and (fyear =< 1967)) then g_MTAX = (0.48 + &g_AST.);
+	if ((fyear >= 1968) and (fyear =< 1969)) then g_MTAX = (0.528 + &g_AST.);
+	if fyear = 1970 then g_MTAX = (0.492 + &g_AST.);
+	if ((fyear >= 1971) and (fyear =< 1978)) then g_MTAX = (0.48 + &g_AST.);
+	if ((fyear >= 1979) and (fyear =< 1986)) then g_MTAX = (0.46 + &g_AST.);
+	if fyear = 1987 then g_MTAX = (0.40 + &g_AST.);
+	if ((fyear >= 1988) and (fyear =< 1992)) then g_MTAX = (0.34 + &g_AST.);
+	if ((fyear >= 1993) and (fyear =< 2017)) then g_MTAX = (0.35 + &g_AST.);
 		label g_MTAX = "Marginal Tax";
 	if missing(NI) then NI = 0; 
 	if missing(DVP) then DVP = 0; 
@@ -98,14 +111,18 @@ data A_FR_02 ;
 	if missing(TSTKP) then TSTKP = 0;  
 	if missing(DVPA) then DVPA = 0; 
 	if missing(CHE) then CHE = 0; 
-	if missing(IVAO) then IVAO = 0; 
+	if missing(IVAO) then IVAO = 0;
+	if missing(EIEA) then EIEA = 0;
+	if missing(NOPI) then NOPI = 0;
+	if missing(SPI) then SPI = 0;
+	if missing(XIDO) then XIDO = 0; 
 run;
 
 /*  Creating lagMSA and lagRECTA variables                                     */
 
 data A_FR_02_lag01 /*(RENAME=(fyear=fyear01 gvkey=gvkey01))*/;
 	set A_FR_02;
-	keep gvkey conm fyear MSA RECTA;
+	keep &MainVars. MSA RECTA;
 run;
 
 proc sort data = A_FR_02_lag01 nodupkey;
@@ -121,9 +138,11 @@ run;
 
 data A_FR_02_lag02;
 	set A_FR_02_lag02;
-	drop MSA RECTA conm;
+	if missing(g_lagMSA) then g_lagMSA = MSA;
+	if missing(g_lagRECTA) then g_lagRECTA = RECTA;
 	label g_lagMSA = "Marketable Securities Adjustment (t-1)";
 	label g_lagRECTA = "Retained Earnings - Cumulative Translation Adjustment (t-1)";
+	drop MSA RECTA;
 run;
 
 /*  Merging back lagSALE / lagMSA / lagRECTA                                   */
@@ -141,8 +160,8 @@ data A_FR_04;
 	set A_FR_03;
 
 /*  Equation 2	*/
-/*  Core Net Financial Expense (Core NFE) = after tax interest expense (#15 × (1 - marginal tax rate))
-    plus preferred dividends (#19) and minus after tax interest income (#62 × (1 - marginal tax rate)).
+/*  Core Net Financial Expense (Core NFE) = after tax interest expense (#15 * (1 - marginal tax rate))
+    plus preferred dividends (#19) and minus after tax interest income (#62 * (1 - marginal tax rate)).
     */
 g_CNFE = (XINT * (1- g_MTAX )) + DVP - (IDIT * (1- g_MTAX));
 	label g_CNFE = "Core Net Financial Expense";
@@ -213,13 +232,41 @@ g_CSE = CEQ + TSTKP - DVPA;
     */
 g_NOA = g_NFO + g_CSE + MIB;
 	label g_NOA = "Net Operating Assets";
-run;
+
+/*  Profit Margin  */
+/*  Profit Margin (g_PM) = Comprehensive Operating Income (g_OI) / Sales/Turnover (Net) (SALE)
+    */
+if SALE ne 0 then g_PM = g_OI / SALE;
+	label g_PM = "Profit Margin";
+
 /*******************************************************************************/
-/*  Creating g_lagNOA, g_lagCSE, and g_lagNFO variables                        */
+/*  Core Sales Profit Margin calculations                                      */
+/*******************************************************************************/
+
+/*  Unusual Operating Income  */
+g_UOI = (NOPI * (1- g_MTAX )) - EIEA + (SPI * (1- g_MTAX)) + XIDO + (RECTA - g_lagRECTA);
+	label g_UOI = "Unusual Operating Income";
+
+/*  Operating Income from Sales  */
+g_OIS = g_OI - EIEA;
+	label g_OIS = "Operating Income from Sales";
+
+/*  Core Operating Income from Sales  */
+g_COIS = g_OIS - g_UOI;
+	label g_COIS = "Core Operating Income from Sales";
+
+/*  Core Sales Profit Margin  */
+if SALE ne 0 then g_CSPM = g_COIS / SALE;
+	label g_CSPM = "Core Sales Profit Margin";
+
+run;
+
+/*******************************************************************************/
+/*  Creating g_lagNOA, g_PM, g_lagCSE, and g_lagNFO variables                  */
 
 data A_FR_04_lag01;
 	set A_FR_04;
-	keep gvkey conm fyear g_NOA g_NFO g_CSE;
+	keep &MainVars. g_NOA g_PM g_NFO g_CSE;
 run;
 
 proc sort data = A_FR_04_lag01 nodupkey;
@@ -230,77 +277,121 @@ proc expand data=A_FR_04_lag01 out=A_FR_04_lag02 method=none;
 	by gvkey;
 	id fyear;
 	convert g_NOA=g_lagNOA / transform=(lag);
-	convert g_NFO=g_lagNFO / transform=(lag);
 	convert g_CSE=g_lagCSE / transform=(lag);
+	convert g_PM=g_lagPM / transform=(lag);
+	convert g_NFO=g_lagNFO / transform=(lag);	
 run;
 
 data A_FR_04_lag02;
 	set A_FR_04_lag02;
-	drop g_NOA g_NFO conm g_CSE;
+	drop g_NOA g_NFO g_CSE;
 	label g_lagNOA = "Net Operating Assets (t-1)";
-	label g_lagNFO = "Net Financial Obligations (t-1)";
 	label g_lagCSE = "Common Equity (t-1)";
+	label g_lagPM = "Profit Margin (t-1)";
+	label g_lagNFO = "Net Financial Obligations (t-1)";
 run;
 
 /*  Merging back g_lagNOA, g_lagCSE, and g_lagNFO                              */
 
 proc sql;
 	create table A_FR_05 as
- 		select a.*, b.g_lagNOA, b.g_lagNFO, b.g_lagCSE
+ 		select a.*, b.g_lagNOA, b.g_lagPM, b.g_lagCSE, b.g_lagNFO
 		from A_FR_04 a left join A_FR_04_lag02 b
 		on a.gvkey = b.gvkey and a.fyear = b.fyear;
 quit;
 
-/*  Calculating RNOA and NBC                                                   */
-data A_FR_06;
+/*  Calculating RNOA, NBC and additional ratios                                */
+data C_FR_01;
 	set A_FR_05;
-
-/*******************************************************************************/
-/*  Equation 1                                                                 */
-/*  Return on Net Operating Assets (g_RNOA) =
-    Comprehensive Operating Income (g_OI)
-    divided by lagged Net Operating Assets (g_lagNOA)                          */
-	if g_lagNOA ne 0 then g_RNOA = g_OI / g_lagNOA; else g_RNOA =.;
-	label g_RNOA = "Return on Net Operating Assets";
+/*  Average Net Financial Obligations  */
+	if (g_lagNFO ne .) then g_AvgNFO = ((g_NFO + g_lagNFO) /2);
+	label g_AvgNFO = "Average Net Financial Obligations";
 	
-/*  Net Borrowing Cost  */
-/*  Net Borrowing Cost (NBC) = Net Financial Expense (g_NFE) / Net Financial Obligations (g_NFO)
+/*  Net Borrowing Cost - average */
+/*  Net Borrowing Cost (r_NBC) = Net Financial Expense (g_NFE) / Average Net Financial Obligations (g_AvgNFO)
 	in the previous period).
     */
-	if g_lagNFO ne 0 then r_NBC = (g_NFE / g_lagNFO); else r_NBC = . ;
-	label r_NBC = "Net Borrowing Cost";
+	if g_AvgNFO ne 0 then r_NBC = (g_NFE / g_AvgNFO); else r_NBC = . ;
+	label r_NBC = "Net Borrowing Cost (avg)";
+
+/*  Net Borrowing Cost - lagged */
+/*  Net Borrowing Cost (NBC) = Net Financial Expense (g_NFE) / Average Net Financial Obligations (g_AvgNFO)
+	in the previous period).
+    */
+	if g_lagNFO ne 0 then r_NBC_lag = (g_NFE / g_lagNFO); else r_NBC = . ;
+	label r_NBC_lag = "Net Borrowing Cost (lag)";
+
+/*  Average Common Equity  */
+	if (g_lagCSE ne .) then g_AvgCSE = ((g_CSE + g_lagCSE) /2);
+	label g_AvgCSE = "Average Common Equity";
+
+/*  Leverage  */
+/*  Leverage  (g_LEV) = Average Net Financial Obligations (g_AvgNFO) / Average Common Equity (g_AvgCSE)
+    */
+	if g_AvgCSE ne 0 then g_LEV = g_AvgNFO / g_AvgCSE;
+	label g_LEV = "Leverage";
 
 /*  Leverage  */
 /*  Leverage  (g_LEV) = Net Financial Obligation (g_NFO) / Common Equity (g_CSE)
     */
-	if g_CSE ne 0 then g_LEV = g_NFO / g_CSE;
-	label g_LEV = "Leverage";
+	if g_lagCSE ne 0 then g_lagLEV = g_lagNFO / g_lagCSE;
+	label g_lagLEV = "Leverage (t-1)";
 
-/*  Profit Margin  */
-/*  Profit Margin (g_PM) = Comprehensive Operating Income (g_OI) / Sales/Turnover (Net) (SALE)
-    */
-	if SALE ne 0 then g_PM = g_OI / SALE;
-	label g_PM = "Profit Margin";
+/*  Average Net Operating Assets  */
+	if (g_lagNOA ne 0) then g_AvgNOA = ((g_NOA + g_lagNOA) /2);
+	label g_AvgNOA = "Average Net Operating Assets";
+
+/*  Net Operating Asset Growth  */
+	if (g_lagNOA ne 0) then g_GrNOA = ((g_NOA / g_lagNOA) -1);
+	label g_GrNOA = "Net Operating Asset Growth";
+
+/*  Profit Margin Growth (delta)  */
+	if (g_lagPM ne 0) then g_dPM = (g_PM - g_lagPM);
+	label g_dPM = "Profit Margin Growth";
 
 /*  Asset Turnover  */
 /*  Asset Turnover (g_ATO) = Sales/Turnover (Net) (SALE) / Average Net Operating Assets (g_NOA)
     */
-	if (g_lagNOA ne 0) then AvgNOA = ((g_NOA + g_lagNOA) /2);
-	if (AvgNOA ne 0) then g_ATO = SALE / AvgNOA;
+	if (g_AvgNOA ne 0) then g_ATO = SALE / g_AvgNOA;
 	label g_ATO = "Asset Turnover";
 
-	drop &ROAVars.;
-run;
+/*******************************************************************************/
+/*  Equation 1 - with lagged NOA                                               */
+/*  Return on Net Operating Assets (g_RNOA_lag) =
+    Comprehensive Operating Income (g_OI)
+    divided by lagged Net Operating Assets (g_lagNOA)                          */
+if g_lagNOA ne 0 then g_RNOA_lag = g_OI / g_lagNOA;
+	label g_RNOA_lag = "Return on Net Operating Assets (lag)";
 
-data C_FR_01;
-	set A_FR_06;
+/*******************************************************************************/
+/*  Equation 1 - with average NOA                                              */
+/*  Return on Net Operating Assets (g_RNOA_avg) =
+    Comprehensive Operating Income (g_OI)
+    divided by average Net Operating Assets (g_AvgNOA)                          */
+if g_AvgNOA ne 0 then g_RNOA_avg = g_OI / g_AvgNOA;
+	label g_RNOA_avg = "Return on Net Operating Assets (avg)";
 
-/*  Return on Common Equity  */
+/*  Spread  */
+/*  Spread (g_SPRD) = Return on Net Operating Assets (g_RNOA_avg) - Net Borrowing Cost (r_NBC)
+    */
+g_SPRD = g_RNOA_avg - r_NBC;
+	label g_SPRD = "Spread";
+
+/*  Return on Common Equity  - average BS items */
 /*  Net Borrowing Cost (r_NBC) = Net Financial Expense (g_NFE) / Net Financial Obligations (g_NFO)
 	in the previous period).
     */
-	if ((g_lagCSE ne 0) and (r_NBC ne 0)) then r_ROCE = (  ((g_lagNOA / g_lagCSE) * g_RNOA) - ((g_lagNFO / g_lagCSE) * r_NBC)  );
-	label r_ROCE = "Return on Common Equity";
+	if (g_AvgCSE ne 0) then r_ROCE = (  ((g_AvgNFO / g_AvgCSE) * g_RNOA_avg) - ((g_AvgNFO / g_AvgCSE) * r_NBC)  );
+	label r_ROCE = "Return on Common Equity (avg)";
+
+/*  Return on Common Equity - lagged BS items  */
+/*  Net Borrowing Cost (r_NBC) = Net Financial Expense (g_NFE) / Net Financial Obligations (g_NFO)
+	in the previous period).
+    */
+	if (g_lagCSE ne 0) then r_ROCE_lag = (  ((g_lagNOA / g_lagCSE) * g_RNOA_lag) - ((g_lagNFO / g_lagCSE) * r_NBC_lag)  );
+	label r_ROCE_lag = "Return on Common Equity - (lag)";
+
+	drop &ROAVars.;
 run;
 
 /*******************************************************************************/
@@ -362,7 +453,18 @@ data C_FR_02;
     */
 	if CEQ ne 0 then g_MTB = (g_MVE / CEQ);
 	label g_MTB = "Market-to-Book Ratio";
+
+	drop &ADDLvars.;
 run;
+
+/*  Merging datasets                                   */
+
+proc sql;
+	create table D_FR_00 as
+ 		select a.*, b.*
+		from C_FR_01 a left join C_FR_02 b
+		on a.gvkey = b.gvkey and a.fyear = b.fyear;
+quit;
 
 /*  OPTIONAL: only if input dataset was a subset, not if compm.funda used      */
 
@@ -377,6 +479,13 @@ proc sql;
 		on a.gvkey = b.gvkey and a.fyear = b.fyear;
 quit;
 
+*/
+
+/*  Saving dataset for download  */
+/*
+data FR.Balogh_Financial_ratios ;
+	set D_FR_00;
+run;
 */
 
 /*  Cleanup                                                                    */
