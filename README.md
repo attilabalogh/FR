@@ -7,11 +7,15 @@ This is the companion Github repository for the paper and the associated SAS cod
 
 Financial ratios calculated for all Compustat firms are made available for download in a dataset at http://www.balogh.net/datasets/
 
+Please reference the following paper when using the data: Balogh, Attila, 2017, Financial Ratios for Accounting Research, https://ssrn.com/abstract=3053402
+
 Comments, corrections, suggestions and new ratio ideas are welcome.
 All errors are my own.
 
 Attila Balogh
+
 attila.balogh@unsw.edu.au
 
 School of Banking and Finance, UNSW Business School
+
 https://www.business.unsw.edu.au/
