@@ -1,27 +1,22 @@
 /*******************************************************************************/
 /*                                                                             */
-/*                   Financial Ratios for Accounting Research                  */
+/*                   Identifying Firm Life Cycles                              */
 /*                                                                             */
 /*  Program      : 01-Dataset_import.sas                                       */
 /*  Author       : Attila Balogh, School of Banking and Finance                */
 /*                 UNSW Business School, UNSW Sydney                           */
-/*  Date Created : 17 Oct 2017                                                 */
-/*  Last Modified: 17 Oct 2017                                                 */
+/*  Date Created : 30 Oct 2017                                                 */
+/*  Last Modified: 30 Oct 2017                                                 */
 /*                                                                             */
-/*  Description  : Import a Compustat dataset from the WRDS system             */ 
+/*  Description  : Calculate additional financial ratios for life cycle        */ 
+/*                 research                                                    */ 
 /*                                                                             */
-/*  Notes        : The program to calculate financial ratios relies on an      */
-/*                 initial dataset named A_input_00 with GVKEY-FYEAR           */
-/*                 combinations for the firms of interest. In the absence of   */
-/*                 such dataset, the program creates a test dataset to         */
-/*                 demonstrate its workings.                                   */
+/*  Notes        : Please reference the following paper when using this code   */
+/*                 Balogh, A, Identifying Firm Life Cycles                     */
+/*                 Available at SSRN: https://ssrn.com/abstract=xxxxxxx        */
 /*                                                                             */
-/*                 Please reference the following paper when using this code   */
-/*                 Balogh, A, Financial Ratios for Accounting Research         */
-/*                 Available at SSRN: https://ssrn.com/abstract=3053402        */
-/*                                                                             */
-/*	               This program is to be used in conjunction with prerequisite */
-/*	               programs listed in the 00-Master.sas file                   */
+/*                 This program is to be used in conjunction with prerequisite */
+/*                 programs listed in the 00-Master.sas file                   */
 /*******************************************************************************/
 
 /*	Sample dataset to test functionality in the absence of a live input file   */

@@ -6,7 +6,7 @@
 /*  Author       : Attila Balogh, School of Banking and Finance                */
 /*                 UNSW Business School, UNSW Sydney                           */
 /*  Date Created : 17 Oct 2017                                                 */
-/*  Last Modified: 27 Oct 2017                                                 */
+/*  Last Modified: 30 Oct 2017                                                 */
 /*                                                                             */
 /*  Description  : Calculate Return on Net Operating Assets using Compustat    */ 
 /*                 along with a host of other financial ratios                 */ 
@@ -23,11 +23,15 @@
 /*                 programs listed in the 00-Master.sas file                   */
 /*******************************************************************************/
 
+/*  Set dataset version to use                                                 */
+
+%let dataver = 20170913;
+
 /*  Setting key Compustat variable names                                       */
 %let MainVars = gvkey fyear /*conm*/;
 
 /*  Setting RNOA-specific Compustat variable names                             */
-%let ROAVars = NI DVP MSA RECTA MII MIB XINT IDIT CEQ TSTKP DVPA DLC DLTT PSTK TSTKP DVPA CHE IVAO SALE EIEA NOPI SPI XIDO;
+%let ROAVars = AT NI DVP MSA RECTA MII MIB XINT IDIT CEQ TSTKP DVPA DLC DLTT PSTK TSTKP DVPA CHE IVAO SALE EIEA NOPI SPI XIDO;
 
 /*  Setting standard Compustat Filters                                         */
 %let CSfilter = (
@@ -56,7 +60,7 @@
 
 
 data A_FR_01 ;
-	set compm.funda;
+	set compm.funda_&dataver.;
 /*	set A_FR_00;*/
 	where &CSfilter.;
 	keep &MainVars. &ROAVars.;
@@ -122,7 +126,7 @@ run;
 
 data A_FR_02_lag01 /*(RENAME=(fyear=fyear01 gvkey=gvkey01))*/;
 	set A_FR_02;
-	keep &MainVars. MSA RECTA;
+	keep &MainVars. MSA RECTA SALE;
 run;
 
 proc sort data = A_FR_02_lag01 nodupkey;
@@ -134,6 +138,7 @@ proc expand data=A_FR_02_lag01 out=A_FR_02_lag02 method=none;
 	id fyear;
 	convert MSA=g_lagMSA / transform=(lag);
 	convert RECTA=g_lagRECTA / transform=(lag);
+	convert SALE=g_lagSALE / transform=(lag);
 run;
 
 data A_FR_02_lag02;
@@ -142,14 +147,15 @@ data A_FR_02_lag02;
 	if missing(g_lagRECTA) then g_lagRECTA = RECTA;
 	label g_lagMSA = "Marketable Securities Adjustment (t-1)";
 	label g_lagRECTA = "Retained Earnings - Cumulative Translation Adjustment (t-1)";
-	drop MSA RECTA;
+	label g_lagSALE = "Sales/Turnover (Net) (t-1)";
+	drop MSA RECTA SALE;
 run;
 
 /*  Merging back lagSALE / lagMSA / lagRECTA                                   */
 
 proc sql;
 	create table A_FR_03 as
- 		select a.*, b.g_lagMSA, b.g_lagRECTA
+ 		select a.*, b.g_lagMSA, b.g_lagRECTA, b.g_lagSALE
 		from A_FR_02 a left join A_FR_02_lag02 b
 		on a.gvkey = b.gvkey and a.fyear = b.fyear;
 quit;
@@ -238,6 +244,18 @@ g_NOA = g_NFO + g_CSE + MIB;
     */
 if SALE ne 0 then g_PM = g_OI / SALE;
 	label g_PM = "Profit Margin";
+
+/*	Sales Growth */
+if g_lagSale ne 0 then GrSales = ((Sale / g_lagSale) -1);
+	label GrSales = "Sales Growth";
+
+/*	Operating Assets (OA) = Total Assets (TA, Compustat #6) minus Financial Assets (FA).*/
+	g_OA = AT - g_FA;
+	label g_OA = Operating Assets;
+
+/*	Operating Liabilities (OL) = Operating Assets (OA) minus Net Operating Assets (NOA)*/
+	g_OL = g_CNI + g_NOA;
+	label g_OL = Operating Liabilities;
 
 /*******************************************************************************/
 /*  Core Sales Profit Margin calculations                                      */
@@ -407,7 +425,7 @@ run;
 %let ADDLvars = DVC NI XAD XRD AM SALE EPSPX CSHO PRCC_F CEQ;
 
 data B_FR_01 ;
-	set compm.funda;
+	set compm.funda_&dataver.;
 /*	set A_FR_00;*/
 	where &CSfilter.;
 	keep &MainVars. &ADDLvars.;
@@ -418,7 +436,7 @@ data C_FR_02;
 
 	/*  Earnings per Share  */
 	g_EPS = EPSPX;
-	label g_EPS = "Earnings Per Share";
+	label g_EPS = "Earnings Per Share (Basic) Excluding Extraordinary Items";
 
 /*  Dividend Payout Ratio  */
 /*  Dividend Payout Ratio (g_DIVPAY) = Common Dividends (DVC) / Net Income (NI)
@@ -483,7 +501,7 @@ quit;
 
 /*  Saving dataset for download  */
 /*
-data FR.Balogh_Financial_ratios ;
+data FR.D_FR_00 FR.Balogh_Financial_ratios ;
 	set D_FR_00;
 run;
 */
@@ -491,7 +509,7 @@ run;
 /*  Cleanup                                                                    */
 
 Proc datasets memtype=data nolist;
-	delete A_FR_: B_FR_: ;
+	delete A_FR_: B_FR_: C_FR_:;
 quit;
 
 /* *************************************************************************** */
