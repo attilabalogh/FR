@@ -11,6 +11,9 @@ Please cite e the following paper when using the data: Balogh, Attila, 2021, Fin
 Attila Balogh
 
 Samuel Curtis Johnson School of Management
+
 Cornell SC Johnson College of Business
+
 balogh@cornell.edu
+
 https://blogs.cornell.edu/balogh/
